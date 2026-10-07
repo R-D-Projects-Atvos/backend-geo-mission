@@ -19,32 +19,14 @@ O sistema realiza:
 
 ---
 
-## Estrutura do projeto
+## Variaveis de ambiente
 
-```text
-backend-geo-mission/
-│
-├── src/
-│   │
-│   ├── main.py
-│   │
-│   ├── config/
-│   │   ├── __init__.py
-│   │   └── database.py
-│   │
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   ├── aplicacao.py
-│   │   └── shape.py
-│   │
-│   └── services/
-│       ├── __init__.py
-│       ├── controle_missao.py
-│       ├── geometria_missao.py
-│       └── rotina_aplicacao.py
-│
-├── .env
-├── .env.example
-├── .gitignore
-├── requirements.txt
-└── README.md
+DB_HOST=
+DB_PORT=
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+
+POWER_AUTOMATE_APLICACAO_URL=
+POWER_AUTOMATE_APLICACAO_48H_URL=
+POWER_AUTOMATE_SHAPE_URL=
