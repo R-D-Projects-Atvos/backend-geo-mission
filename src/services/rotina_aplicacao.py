@@ -15,6 +15,10 @@ from services.geometria_missao import (
     salvar_geometrias_talhoes_em_lote
 )
 
+from services.pdf_missao import (
+    gerar_pdfs_ordens_servico
+)
+
 
 def normalizar_dados_48h(dados):
 
@@ -110,6 +114,8 @@ def processar_missoes(dados):
             else:
 
                 novas += 1
+
+            resultado["registro_bruto"] = registro
 
             missoes_processar.append(
                 resultado
@@ -350,6 +356,45 @@ def processar_missoes(dados):
             "[AGUARDANDO PRÓXIMA ETAPA "
             "DO PROCESSAMENTO]"
         )
+
+    if missoes_com_geometria:
+
+        print("-" * 80)
+        print("GERANDO PDFs POR ORDEM DE SERVIÇO")
+        print("-" * 80)
+
+        for resultado_pdf in gerar_pdfs_ordens_servico(
+            missoes_com_geometria
+        ):
+
+            if resultado_pdf["status"] == "ERRO":
+
+                print(
+                    f"[PDF ERRO] "
+                    f"{resultado_pdf['os']}: "
+                    f"{resultado_pdf['erro']}"
+                )
+
+            else:
+
+                print(
+                    f"[PDF {resultado_pdf['status']}] "
+                    f"{resultado_pdf['arquivo'] or resultado_pdf['os']}"
+                )
+
+                if resultado_pdf["erro"]:
+
+                    print(
+                        f"[PDF AVISO] "
+                        f"{resultado_pdf['erro']}"
+                    )
+
+                for aviso in resultado_pdf.get("avisos", []):
+
+                    print(
+                        f"[PDF AVISO] "
+                        f"{resultado_pdf['os']}: {aviso}"
+                    )
 
     return {
         "novas": novas,

@@ -6,12 +6,12 @@ def buscar_talhao_por_chavesig(chavesig):
 
     sql = text("""
         SELECT TOP 1
-            Chavesig,
+            CAST(Chavesig AS NVARCHAR(50)) AS CHAVESIG,
             Shape.STAsText() AS WKT,
             Shape.STSrid AS SRID
         FROM ATVOSPUBLICADOR.BASE_TALHOES_ATVOS
         WHERE
-            Chavesig = :chavesig
+            CAST(Chavesig AS NVARCHAR(50)) = :chavesig
             AND Shape IS NOT NULL
         ORDER BY
             GDB_FROM_DATE DESC
@@ -22,7 +22,7 @@ def buscar_talhao_por_chavesig(chavesig):
         resultado = connection.execute(
             sql,
             {
-                "chavesig": chavesig
+                "chavesig": str(chavesig).strip()
             }
         ).mappings().first()
 
@@ -31,7 +31,7 @@ def buscar_talhao_por_chavesig(chavesig):
         return None
 
     return {
-        "chavesig": resultado["Chavesig"],
+        "chavesig": resultado["CHAVESIG"],
         "wkt": resultado["WKT"],
         "srid": resultado["SRID"]
     }
@@ -101,11 +101,11 @@ def salvar_geometrias_talhoes_em_lote(missoes):
     """)
 
     sql_missoes_encontradas = text("""
-        SELECT
-            g.MISSAO_ID
-        FROM ATVOSPUBLICADOR.GEOMETRIAS_MISSAO g
-        INNER JOIN #MISSOES_TALHAO m
-            ON m.MISSAO_ID = g.MISSAO_ID
+        SELECT DISTINCT
+            m.MISSAO_ID
+        FROM #MISSOES_TALHAO m
+        INNER JOIN ATVOSPUBLICADOR.GEOMETRIAS_MISSAO g
+            ON g.MISSAO_ID = m.MISSAO_ID
     """)
 
     with engine.begin() as connection:
@@ -127,6 +127,7 @@ def salvar_geometrias_talhoes_em_lote(missoes):
             ).strip()
 
             if not chavesig:
+
                 continue
 
             registros.append(
