@@ -405,15 +405,51 @@ def processar_missoes(dados):
 
             if resultado_pdf["status"] in STATUS_PDF_CONCLUIDO:
 
-                for chave_missao in resultado_pdf.get(
+                # O resultado do PDF reúne as missões vinculadas à mesma O.S.
+                chaves_missao_pdf = resultado_pdf.get(
                     "chaves_missao",
                     []
-                ):
+                )
+
+                caminho_pdf = resultado_pdf.get("arquivo")
+
+                # Se o gerador de PDF informar a quantidade, usamos esse valor.
+                # Caso contrário, contamos as missões/talhões associados ao PDF.
+                total_talhoes_pdf = resultado_pdf.get(
+                    "total_talhoes"
+                )
+
+                if total_talhoes_pdf is None:
+                    total_talhoes_pdf = len(chaves_missao_pdf)
+
+                for chave_missao in chaves_missao_pdf:
 
                     try:
 
+                        missao_atual = next(
+                            (
+                                missao
+                                for missao in missoes_com_geometria
+                                if missao.get("chave_missao") == chave_missao
+                            ),
+                            None
+                        )
+
+                        if missao_atual is None:
+                            raise ValueError(
+                                "Não foi encontrada a missão "
+                                "para recuperar DATA_FINAL_OS."
+                            )
+
+                        data_final_os = missao_atual.get(
+                            "data_final_os"
+                        )
+
                         marcar_concluida(
-                            chave_missao
+                            chave_missao=chave_missao,
+                            pdf_caminho=caminho_pdf,
+                            data_final_os=data_final_os,
+                            total_talhoes=total_talhoes_pdf
                         )
 
                     except Exception as e:

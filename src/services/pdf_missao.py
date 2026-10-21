@@ -650,6 +650,18 @@ def _preparar(unidade, numero_os, cod_fazenda, missoes, talhoes_base, raws):
         base = talhoes_base.get(ch)
         dec = decompor_chavesig(ch)
         atrib = (base or {}).get("atributos", {}) or {}
+        if not getattr(_preparar, "_debug_atributos", False):
+            _preparar._debug_atributos = True
+
+            print("\n===== DEBUG ATRIBUTOS DA BASE =====")
+            print("CHAVESIG:", ch)
+
+            for coluna, valor in atrib.items():
+                print(f"{coluna!r}: {valor!r}")
+
+            print("===== FIM DEBUG ATRIBUTOS =====\n")
+
+
         raw = raws.get((unidade, numero_os, ch)) or {}
         fontes = (raw, atrib)
 

@@ -44,6 +44,11 @@ def obter_dados_missao(registro):
         )
     ).strip()
 
+    # Data de fechamento da OS
+    data_final_os = registro.get(
+        "Aplicacao[DT_FECHAMENTO]"
+    )
+
     if not unidade:
         raise ValueError(
             "UNIDADE não encontrada."
@@ -71,14 +76,11 @@ def obter_dados_missao(registro):
     cd_operacao = None
 
     if cd_operacao_raw is not None:
-
         try:
             cd_operacao = int(
                 float(cd_operacao_raw)
             )
-
         except (ValueError, TypeError):
-
             raise ValueError(
                 f"CD_OPERACAO inválido: {cd_operacao_raw}"
             )
@@ -86,14 +88,11 @@ def obter_dados_missao(registro):
     responsavel = None
 
     if responsavel_raw is not None:
-
         try:
             responsavel = int(
                 float(responsavel_raw)
             )
-
         except (ValueError, TypeError):
-
             raise ValueError(
                 f"RESPONSAVEL inválido: {responsavel_raw}"
             )
@@ -112,7 +111,8 @@ def obter_dados_missao(registro):
         "cd_operacao": cd_operacao,
         "de_operacao": de_operacao,
         "responsavel": responsavel,
-        "descricao_responsavel": descricao_responsavel
+        "descricao_responsavel": descricao_responsavel,
+        "data_final_os": data_final_os
     }
 
 
@@ -130,7 +130,6 @@ def obter_missao(dados):
     """)
 
     with engine.connect() as connection:
-
         resultado = connection.execute(
             sql,
             dados
@@ -152,19 +151,14 @@ def limpar_dados_missao(missao_id):
     """)
 
     with engine.begin() as connection:
-
         connection.execute(
             sql_geometria,
-            {
-                "missao_id": missao_id
-            }
+            {"missao_id": missao_id}
         )
 
         connection.execute(
             sql_resultado,
-            {
-                "missao_id": missao_id
-            }
+            {"missao_id": missao_id}
         )
 
     print(
@@ -175,13 +169,9 @@ def limpar_dados_missao(missao_id):
 
 def registrar_ou_recuperar_missao(registro):
 
-    dados = obter_dados_missao(
-        registro
-    )
+    dados = obter_dados_missao(registro)
 
-    missao = obter_missao(
-        dados
-    )
+    missao = obter_missao(dados)
 
     if missao is None:
 
@@ -195,6 +185,7 @@ def registrar_ou_recuperar_missao(registro):
                 DE_OPERACAO,
                 RESPONSAVEL,
                 DESCRICAO_RESPONSAVEL,
+                DATA_FINAL_OS,
                 STATUS,
                 VERSAO_PROCESSAMENTO
             )
@@ -207,6 +198,7 @@ def registrar_ou_recuperar_missao(registro):
                 :de_operacao,
                 :responsavel,
                 :descricao_responsavel,
+                :data_final_os,
                 'PROCESSANDO',
                 'V1'
             )
@@ -219,7 +211,6 @@ def registrar_ou_recuperar_missao(registro):
         """)
 
         with engine.begin() as connection:
-
             connection.execute(
                 sql_insert,
                 dados
@@ -228,9 +219,7 @@ def registrar_ou_recuperar_missao(registro):
             missao_id = connection.execute(
                 sql_id,
                 {
-                    "chave_missao": dados[
-                        "chave_missao"
-                    ]
+                    "chave_missao": dados["chave_missao"]
                 }
             ).scalar_one()
 
@@ -266,9 +255,7 @@ def registrar_ou_recuperar_missao(registro):
             **dados
         }
 
-    limpar_dados_missao(
-        missao_id
-    )
+    limpar_dados_missao(missao_id)
 
     sql = text("""
         UPDATE ATVOSPUBLICADOR.MISSOES_PROCESSADAS
@@ -277,6 +264,9 @@ def registrar_ou_recuperar_missao(registro):
             DE_OPERACAO = :de_operacao,
             RESPONSAVEL = :responsavel,
             DESCRICAO_RESPONSAVEL = :descricao_responsavel,
+            DATA_FINAL_OS = :data_final_os,
+            PDF_CAMINHO = NULL,
+            TOTAL_TALHOES = NULL,
             STATUS = 'PROCESSANDO',
             PROCESSADO_EM = NULL,
             ATUALIZADO_EM = SYSDATETIME()
@@ -286,22 +276,14 @@ def registrar_ou_recuperar_missao(registro):
     """)
 
     with engine.begin() as connection:
-
         connection.execute(
             sql,
             {
-                "cd_operacao": dados[
-                    "cd_operacao"
-                ],
-                "de_operacao": dados[
-                    "de_operacao"
-                ],
-                "responsavel": dados[
-                    "responsavel"
-                ],
-                "descricao_responsavel": dados[
-                    "descricao_responsavel"
-                ],
+                "cd_operacao": dados["cd_operacao"],
+                "de_operacao": dados["de_operacao"],
+                "responsavel": dados["responsavel"],
+                "descricao_responsavel": dados["descricao_responsavel"],
+                "data_final_os": dados["data_final_os"],
                 "missao_id": missao_id
             }
         )
@@ -320,12 +302,20 @@ def registrar_ou_recuperar_missao(registro):
     }
 
 
-def marcar_concluida(chave_missao):
+def marcar_concluida(
+    chave_missao,
+    pdf_caminho,
+    data_final_os,
+    total_talhoes
+):
 
     sql = text("""
         UPDATE ATVOSPUBLICADOR.MISSOES_PROCESSADAS
         SET
             STATUS = 'CONCLUIDO',
+            PDF_CAMINHO = :pdf_caminho,
+            DATA_FINAL_OS = :data_final_os,
+            TOTAL_TALHOES = :total_talhoes,
             PROCESSADO_EM = SYSDATETIME(),
             ATUALIZADO_EM = SYSDATETIME()
         WHERE
@@ -333,17 +323,27 @@ def marcar_concluida(chave_missao):
     """)
 
     with engine.begin() as connection:
-
-        connection.execute(
+        resultado = connection.execute(
             sql,
             {
-                "chave_missao": chave_missao
+                "chave_missao": chave_missao,
+                "pdf_caminho": pdf_caminho,
+                "data_final_os": data_final_os,
+                "total_talhoes": total_talhoes
             }
         )
 
+        if resultado.rowcount == 0:
+            raise ValueError(
+                f"Missão não encontrada: {chave_missao}"
+            )
+
     print(
         f"[CONCLUIDA] "
-        f"{chave_missao}"
+        f"{chave_missao} | "
+        f"PDF: {pdf_caminho} | "
+        f"Data final OS: {data_final_os} | "
+        f"Total talhões: {total_talhoes}"
     )
 
 
@@ -359,12 +359,9 @@ def marcar_erro(chave_missao):
     """)
 
     with engine.begin() as connection:
-
         connection.execute(
             sql,
-            {
-                "chave_missao": chave_missao
-            }
+            {"chave_missao": chave_missao}
         )
 
     print(
@@ -385,12 +382,9 @@ def marcar_talhao_nao_encontrado(chave_missao):
     """)
 
     with engine.begin() as connection:
-
         connection.execute(
             sql,
-            {
-                "chave_missao": chave_missao
-            }
+            {"chave_missao": chave_missao}
         )
 
     print(
